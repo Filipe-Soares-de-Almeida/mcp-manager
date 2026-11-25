@@ -25,6 +25,12 @@ export const ptBR = {
     backups: "Backups",
     settings: "Ajustes",
   },
+  window: {
+    minimize: "Minimizar",
+    maximize: "Maximizar",
+    restore: "Restaurar",
+    close: "Fechar",
+  },
   top: {
     claudeOpen: "Claude aberto",
     claudeClosed: "Claude fechado",
@@ -41,7 +47,6 @@ export const ptBR = {
     running: "Serão gravadas na config quando o Claude fechar. Reinicie para carregar agora.",
     notRunning: "O Claude está fechado, mas a fila não foi aplicada. Veja o motivo em Alterações.",
     viewQueue: "Ver fila",
-    restartNow: "Reiniciar agora",
   },
   loadFailed: "Não foi possível ler o estado",
   toast: {
@@ -264,8 +269,6 @@ export const ptBR = {
     env: "Variáveis de ambiente",
     varName: "Nome",
     varValue: "Valor",
-    hideValue: "Esconder valor",
-    showValue: "Mostrar valor",
     removeVar: (k: string) => `Remover ${k || "variável"}`,
     addVar: "Adicionar variável",
     extra: "Outros campos",

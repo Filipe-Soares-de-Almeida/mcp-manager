@@ -22,6 +22,27 @@ export async function on<T>(event: string, handler: (payload: T) => void): Promi
   return mockListen(event, handler as (p: unknown) => void);
 }
 
+/** The window's own title bar. Outside Tauri (browser preview) every call is a no-op. */
+export const appWindow = {
+  available: inTauri,
+  async minimize() {
+    if (inTauri) await (await import("@tauri-apps/api/window")).getCurrentWindow().minimize();
+  },
+  async toggleMaximize() {
+    if (inTauri) await (await import("@tauri-apps/api/window")).getCurrentWindow().toggleMaximize();
+  },
+  async close() {
+    if (inTauri) await (await import("@tauri-apps/api/window")).getCurrentWindow().close();
+  },
+  async isMaximized(): Promise<boolean> {
+    return inTauri ? (await import("@tauri-apps/api/window")).getCurrentWindow().isMaximized() : false;
+  },
+  async onResized(handler: () => void): Promise<Unlisten> {
+    if (!inTauri) return () => {};
+    return (await import("@tauri-apps/api/window")).getCurrentWindow().onResized(handler);
+  },
+};
+
 export const api = {
   state: () => call<Snapshot>("get_state"),
   add: (name: string, spec: Spec) => call<Outcome>("add_server", { name, spec }),

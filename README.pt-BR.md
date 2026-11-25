@@ -113,9 +113,9 @@ ou `?lang=pt-BR` escolhe o idioma.
 
 ## A janela
 
-Abra pelo ícone da bandeja ou pelo atalho do Menu Iniciar. O botão **+** adiciona um servidor; o
-topo mostra se o Claude está aberto, com o botão **Reiniciar Claude**, e uma faixa avisa quando há
-alterações na fila.
+Abra pelo ícone da bandeja ou pelo atalho do Menu Iniciar. O botão **+** adiciona um servidor. A
+janela desenha a própria barra de título: ela mostra se o Claude está aberto e, quando há alterações
+na fila, o botão **Reiniciar Claude**, com uma faixa logo abaixo explicando a fila.
 
 | Tela | O que faz |
 |---|---|

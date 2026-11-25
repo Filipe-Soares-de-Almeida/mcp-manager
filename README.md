@@ -110,9 +110,9 @@ above, and `?lang=en-US` or `?lang=pt-BR` picks the language.
 
 ## The window
 
-Open it from the tray icon or the Start menu shortcut. The **+** button adds a server; the top bar
-shows whether Claude is open, with the **Restart Claude** button, and a banner appears while changes
-are queued.
+Open it from the tray icon or the Start menu shortcut. The **+** button adds a server. The window
+draws its own title bar: it shows whether Claude is open and, while changes are queued, the
+**Restart Claude** button, with a banner below that explains the queue.
 
 | Screen | What it does |
 |---|---|

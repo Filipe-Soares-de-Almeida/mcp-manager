@@ -3,6 +3,7 @@
   import Dialog from "./lib/components/Dialog.svelte";
   import Icon, { type IconName } from "./lib/components/Icon.svelte";
   import Logo from "./lib/components/Logo.svelte";
+  import WindowControls from "./lib/components/WindowControls.svelte";
   import ServerDialog from "./lib/components/ServerDialog.svelte";
   import Backups from "./lib/pages/Backups.svelte";
   import Changes from "./lib/pages/Changes.svelte";
@@ -44,6 +45,27 @@
   });
 </script>
 
+<div class="frame">
+<header class="titlebar" data-tauri-drag-region>
+  <span class="brand"><Logo size={20} /><span class="title-s">MCP Manager</span></span>
+  <div class="titlebar-end" data-tauri-drag-region>
+    {#if snap}
+      <span class="claude body-s" class:on={running}>
+        <span class="dot" aria-hidden="true"></span>
+        {running ? L.top.claudeOpen : L.top.claudeClosed}
+      </span>
+    {/if}
+    {#if app.restarting}
+      <span class="progress body-s"><span class="spinner" aria-hidden="true"></span>{app.restartText}</span>
+    {:else if running && pending > 0}
+      <button class="btn filled compact with-icon state" type="button" onclick={() => app.restart()}>
+        <Icon name="refresh" />{L.top.restart}
+      </button>
+    {/if}
+    <WindowControls />
+  </div>
+</header>
+
 <div class="shell">
   <nav class="rail" aria-label={L.nav.label}>
     <button class="fab state" type="button" aria-label={L.nav.addServer} title={L.nav.addServer} onclick={add}>
@@ -69,25 +91,6 @@
   </nav>
 
   <div class="main">
-    <header class="topbar">
-      <span class="brand"><Logo /><span class="title-l">MCP Manager</span></span>
-      <div class="status">
-        {#if snap}
-          <span class="claude body-m" class:on={running}>
-            <span class="dot" aria-hidden="true"></span>
-            {running ? L.top.claudeOpen : L.top.claudeClosed}
-          </span>
-        {/if}
-        {#if app.restarting}
-          <span class="progress body-m"><span class="spinner" aria-hidden="true"></span>{app.restartText}</span>
-        {:else if running}
-          <button class="btn tonal with-icon state" type="button" onclick={() => app.restart()}>
-            <Icon name="refresh" />{L.top.restart}
-          </button>
-        {/if}
-      </div>
-    </header>
-
     {#if pending > 0}
       <div class="banner" role="status">
         <Icon name="schedule" />
@@ -95,16 +98,9 @@
           <strong>{L.banner.count(pending)}</strong>
           {running ? L.banner.running : L.banner.notRunning}
         </p>
-        <div class="banner-actions">
-          {#if app.page !== "changes"}
-            <button class="btn text state" type="button" onclick={() => (app.page = "changes")}>{L.banner.viewQueue}</button>
-          {/if}
-          {#if running}
-            <button class="btn filled state" type="button" disabled={app.restarting} onclick={() => app.restart()}>
-              {L.banner.restartNow}
-            </button>
-          {/if}
-        </div>
+        {#if app.page !== "changes"}
+          <button class="btn text state" type="button" onclick={() => (app.page = "changes")}>{L.banner.viewQueue}</button>
+        {/if}
       </div>
     {/if}
 
@@ -129,6 +125,7 @@
       {/if}
     </main>
   </div>
+</div>
 </div>
 
 <ServerDialog bind:open={editorOpen} row={editing} {taken} />
@@ -170,9 +167,49 @@
 </div>
 
 <style>
-  .shell {
+  .frame {
     display: flex;
+    flex-direction: column;
     height: 100vh;
+  }
+  /* The window has no system frame: this bar is the title bar. Clicks on
+     it (outside buttons) move the window, a double click maximizes it. */
+  .titlebar {
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 16px;
+    background: var(--md-surface);
+    user-select: none;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .titlebar-end {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 100%;
+  }
+  .btn.compact {
+    height: 28px;
+    padding: 0 14px 0 10px;
+    font-size: 13px;
+  }
+  .btn.compact :global(svg) {
+    width: 16px;
+    height: 16px;
+  }
+  .shell {
+    flex: 1;
+    min-height: 0;
+    display: flex;
   }
   .rail {
     width: 88px;
@@ -180,8 +217,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 40px;
-    padding: 20px 0;
+    gap: 32px;
+    padding: 12px 0;
     background: var(--md-surface);
   }
   .fab {
@@ -254,30 +291,12 @@
     flex-direction: column;
     background: var(--md-surface);
   }
-  .topbar {
-    height: 64px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-  }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    white-space: nowrap;
-  }
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
   .claude {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     color: var(--md-on-surface-variant);
+    pointer-events: none;
   }
   .dot {
     width: 8px;
@@ -294,7 +313,7 @@
     align-items: center;
     gap: 10px;
     color: var(--md-primary);
-    height: 40px;
+    pointer-events: none;
   }
   .spinner {
     width: 18px;
@@ -313,7 +332,7 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    margin: 0 24px 8px;
+    margin: 8px 24px;
     padding: 8px 8px 8px 16px;
     min-height: 56px;
     border-radius: var(--shape-m);
@@ -328,16 +347,8 @@
   .banner strong {
     font-weight: 500;
   }
-  .banner-actions {
-    display: flex;
-    gap: 8px;
-  }
   .banner .btn.text {
     color: var(--md-on-tertiary-container);
-  }
-  .banner .btn.filled {
-    background: var(--md-tertiary);
-    color: var(--md-on-tertiary);
   }
   .content {
     flex: 1;

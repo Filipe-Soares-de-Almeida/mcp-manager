@@ -20,7 +20,6 @@
 
   let form = $state<Form>(toForm("", null));
   let errors = $state<Errors>({});
-  let reveal = $state<boolean[]>([]);
   let pasteOpen = $state(false);
   let pasteText = $state("");
   let advanced = $state(false);
@@ -36,7 +35,6 @@
         editing = row;
         form = toForm(row?.name ?? "", row?.spec ?? null);
         errors = {};
-        reveal = form.env.map(() => false);
         pasteOpen = !row;
         pasteText = "";
         advanced = !!form.extra;
@@ -54,7 +52,6 @@
     try {
       const { name, spec } = parsePasted(pasteText);
       form = toForm(name ?? form.name, spec);
-      reveal = form.env.map(() => false);
       advanced = !!form.extra;
       errors = {};
       pasteOpen = false;
@@ -156,26 +153,12 @@
       {#each form.env as entry, i (i)}
         <div class="line env">
           <TextField label={E.varName} code bind:value={entry.key} />
-          <TextField label={E.varValue} code type={reveal[i] ? "text" : "password"} bind:value={entry.value}>
-            {#snippet trailing()}
-              <button
-                class="icon-btn state"
-                type="button"
-                aria-label={reveal[i] ? E.hideValue : E.showValue}
-                onclick={() => (reveal[i] = !reveal[i])}
-              >
-                <Icon name={reveal[i] ? "visibilityOff" : "visibility"} size={20} />
-              </button>
-            {/snippet}
-          </TextField>
+          <TextField label={E.varValue} code bind:value={entry.value} />
           <button
             class="icon-btn state"
             type="button"
             aria-label={E.removeVar(entry.key)}
-            onclick={() => {
-              form.env = form.env.filter((_, j) => j !== i);
-              reveal = reveal.filter((_, j) => j !== i);
-            }}
+            onclick={() => (form.env = form.env.filter((_, j) => j !== i))}
           >
             <Icon name="remove" />
           </button>
@@ -185,10 +168,7 @@
       <button
         class="btn text with-icon state"
         type="button"
-        onclick={() => {
-          form.env = [...form.env, { key: "", value: "" }];
-          reveal = [...reveal, true];
-        }}
+        onclick={() => (form.env = [...form.env, { key: "", value: "" }])}
       >
         <Icon name="add" /> {E.addVar}
       </button>

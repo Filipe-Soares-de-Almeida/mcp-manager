@@ -27,6 +27,12 @@ export const enUS: Dict = {
     backups: "Backups",
     settings: "Settings",
   },
+  window: {
+    minimize: "Minimize",
+    maximize: "Maximize",
+    restore: "Restore down",
+    close: "Close",
+  },
   top: {
     claudeOpen: "Claude is open",
     claudeClosed: "Claude is closed",
@@ -43,7 +49,6 @@ export const enUS: Dict = {
     running: "They are written to the config when Claude closes. Restart to load them now.",
     notRunning: "Claude is closed, but the queue was not applied. Changes shows why.",
     viewQueue: "View queue",
-    restartNow: "Restart now",
   },
   loadFailed: "Could not read the state",
   toast: {
@@ -264,8 +269,6 @@ export const enUS: Dict = {
     env: "Environment variables",
     varName: "Name",
     varValue: "Value",
-    hideValue: "Hide value",
-    showValue: "Show value",
     removeVar: (k: string) => `Remove ${k || "variable"}`,
     addVar: "Add variable",
     extra: "Other fields",
