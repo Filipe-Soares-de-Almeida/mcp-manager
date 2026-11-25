@@ -1,0 +1,23 @@
+<script lang="ts">
+  let { size = 28 }: { size?: number } = $props();
+</script>
+
+<!-- Same drawing as app-icon.svg, the source of the .ico. -->
+<svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
+  <rect width="100" height="100" rx="22" fill="#262624" />
+  <g fill="none" stroke="#E8E6DC" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="29,27 12.5,50 29,73" />
+    <polyline points="71,27 87.5,50 71,73" />
+  </g>
+  <g transform="translate(50 50)" stroke="#D97757" stroke-width="7.5" stroke-linecap="round">
+    <line y1="-7" y2="-18" />
+    <line y1="-7" y2="-18" transform="rotate(90)" />
+    <line y1="-7" y2="-18" transform="rotate(180)" />
+    <line y1="-7" y2="-18" transform="rotate(270)" />
+    <line y1="-7" y2="-14" transform="rotate(45)" />
+    <line y1="-7" y2="-14" transform="rotate(135)" />
+    <line y1="-7" y2="-14" transform="rotate(225)" />
+    <line y1="-7" y2="-14" transform="rotate(315)" />
+  </g>
+  <circle cx="50" cy="50" r="8.5" fill="#D97757" />
+</svg>
