@@ -1,5 +1,6 @@
 <script lang="ts">
   import FirstSteps from "../components/FirstSteps.svelte";
+  import UpdateCard from "../components/UpdateCard.svelte";
   import Icon from "../components/Icon.svelte";
   import Switch from "../components/Switch.svelte";
   import TextField from "../components/TextField.svelte";
@@ -133,6 +134,7 @@
     </div>
   </header>
 
+  <UpdateCard />
   <FirstSteps />
 
   {#if app.snap?.config_error}

@@ -50,7 +50,7 @@ export interface Install {
 export interface Snapshot {
   version: string;
   locale: { setting: "auto" | "pt-BR" | "en-US"; resolved: "pt-BR" | "en-US" };
-  startup: { autostart: boolean; tray_with_claude: boolean; shortcut: boolean };
+  startup: { autostart: boolean; tray_with_claude: boolean; shortcut: boolean; check_updates: boolean };
   claude: { running: boolean; processes: number; install: Install | null };
   config_path: string;
   config_source: "env" | "override" | "detected";
@@ -65,6 +65,26 @@ export interface Snapshot {
   history: HistoryEntry[];
   self_exe: string;
   self_entry: { name: string; up_to_date: boolean; enabled: boolean } | null;
+}
+
+export interface NotesGroup {
+  kind: string;
+  items: string[];
+}
+
+export interface Release {
+  version: string;
+  date: string | null;
+  summary: string | null;
+  groups: NotesGroup[];
+}
+
+export interface UpdateCheck {
+  current: string;
+  latest: string;
+  available: boolean;
+  /** The versions newer than the one running, newest first. */
+  pending: Release[];
 }
 
 export interface Outcome {

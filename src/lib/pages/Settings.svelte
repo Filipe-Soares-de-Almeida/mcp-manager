@@ -62,6 +62,13 @@
         </div>
         <Switch checked={snap.startup.tray_with_claude} label={T.trayWithClaude} onchange={(v) => app.setTrayWithClaude(v)} />
       </div>
+      <div class="toggle">
+        <div>
+          <p class="title-s">{T.checkUpdates}</p>
+          <p class="body-s variant">{T.checkUpdatesHint}</p>
+        </div>
+        <Switch checked={snap.startup.check_updates} label={T.checkUpdates} onchange={(v) => app.setCheckUpdates(v)} />
+      </div>
       <div class="row">
         {#if snap.startup.shortcut}
           <span class="chip live"><Icon name="check" size={16} />{T.shortcutDone}</span>

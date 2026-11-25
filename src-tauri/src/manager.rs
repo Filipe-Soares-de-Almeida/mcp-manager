@@ -28,6 +28,7 @@ const SETTING_EXE: &str = "claude_exe";
 const SETTING_CONFIG: &str = "config_override";
 const SETTING_TRAY: &str = "tray_with_claude";
 const SETTING_LOCALE: &str = "locale";
+const SETTING_UPDATES: &str = "check_updates";
 
 pub struct Manager {
     pub data: PathBuf,
@@ -61,6 +62,8 @@ pub struct Startup {
     pub autostart: bool,
     /// The MCP server starts the app in the tray when it is not running.
     pub tray_with_claude: bool,
+    /// The window asks GitHub for a newer release when it opens and once a day.
+    pub check_updates: bool,
     pub shortcut: bool,
 }
 
@@ -183,6 +186,14 @@ impl Manager {
         store::set_setting(&self.conn, SETTING_LOCALE, Some(setting))
     }
 
+    pub fn check_updates(&self) -> bool {
+        !matches!(store::setting(&self.conn, SETTING_UPDATES), Ok(Some(v)) if v == "0")
+    }
+
+    pub fn set_check_updates(&self, enabled: bool) -> Result<()> {
+        store::set_setting(&self.conn, SETTING_UPDATES, Some(if enabled { "1" } else { "0" }))
+    }
+
     pub fn tray_with_claude(&self) -> bool {
         !matches!(store::setting(&self.conn, SETTING_TRAY), Ok(Some(v)) if v == "0")
     }
@@ -251,6 +262,7 @@ impl Manager {
             startup: Startup {
                 autostart: launch::autostart_enabled(),
                 tray_with_claude: self.tray_with_claude(),
+                check_updates: self.check_updates(),
                 shortcut: launch::shortcut_exists(),
             },
             claude: ClaudeStatus { running: !running.is_empty(), processes: running.len(), install: install.clone() },

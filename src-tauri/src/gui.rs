@@ -24,6 +24,7 @@ use crate::locale;
 use crate::manager::{ApplyReport, Manager, Outcome, Snapshot};
 use crate::ops::{Op, ServerMap};
 use crate::paths;
+use crate::update::{self, Check, Feed, Release};
 use crate::watcher;
 
 const TRAY_ID: &str = "main";
@@ -31,6 +32,11 @@ const TRAY_ID: &str = "main";
 struct AppState {
     mgr: Mutex<Manager>,
     restarting: Arc<AtomicBool>,
+    /// The feed of the last check that found a newer version.
+    feed: Mutex<Option<Feed>>,
+    updating: AtomicBool,
+    /// The version this start replaced, when it is the first start after an update.
+    updated_from: Mutex<Option<String>>,
 }
 
 type Res<T> = Result<T, String>;
@@ -211,6 +217,73 @@ async fn set_locale(app: AppHandle, state: State<'_, AppState>, locale: String) 
 }
 
 #[tauri::command]
+async fn set_check_updates(state: State<'_, AppState>, enabled: bool) -> Res<()> {
+    with(&state, |m| m.set_check_updates(enabled))
+}
+
+#[tauri::command]
+async fn release_notes(lang: String) -> Res<Vec<Release>> {
+    Ok(update::release_notes(&lang))
+}
+
+#[tauri::command]
+async fn check_update(state: State<'_, AppState>, lang: String) -> Res<Check> {
+    let (check, feed) = tauri::async_runtime::spawn_blocking(move || update::check(&lang))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(err)?;
+    *state.feed.lock().map_err(|_| "update state unavailable")? = check.available.then_some(feed);
+    Ok(check)
+}
+
+#[derive(Clone, Serialize)]
+struct UpdateProgress {
+    done: u64,
+    total: Option<u64>,
+}
+
+/// Downloads and installs the version the last check found, then restarts
+/// the app from it. Returns only on failure.
+#[tauri::command]
+async fn install_update(app: AppHandle, state: State<'_, AppState>) -> Res<()> {
+    let feed = state
+        .feed
+        .lock()
+        .map_err(|_| "update state unavailable")?
+        .clone()
+        .ok_or("no update was found to install")?;
+    if state.updating.swap(true, Ordering::SeqCst) {
+        return Err("an update is already being installed".into());
+    }
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let progress_app = app.clone();
+    let target = exe.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        update::install(&feed, &target, &|done, total| {
+            let _ = progress_app.emit("update-progress", UpdateProgress { done, total });
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())
+    .and_then(|r| r.map_err(err));
+    if let Err(e) = result {
+        state.updating.store(false, Ordering::SeqCst);
+        paths::log(&paths::data_dir(), &format!("update failed: {e}"));
+        return Err(e);
+    }
+    paths::log(&paths::data_dir(), &format!("updated from {}; restarting", update::VERSION));
+    launch::relaunch_after_update(&exe, update::VERSION).map_err(err)?;
+    app.exit(0);
+    Ok(())
+}
+
+/// The version replaced by the update that started this process, once.
+#[tauri::command]
+async fn take_updated_from(state: State<'_, AppState>) -> Res<Option<String>> {
+    Ok(state.updated_from.lock().map_err(|_| "unavailable")?.take())
+}
+
+#[tauri::command]
 async fn create_shortcut() -> Res<String> {
     launch::create_shortcut().map(|p| p.to_string_lossy().into_owned()).map_err(err)
 }
@@ -305,7 +378,7 @@ fn spawn_monitor(app: AppHandle, restarting: Arc<AtomicBool>) {
     });
 }
 
-pub fn run() {
+pub fn run(updated_from: Option<String>) {
     let mgr = match Manager::open() {
         Ok(m) => m,
         Err(e) => {
@@ -313,6 +386,9 @@ pub fn run() {
             std::process::exit(1);
         }
     };
+    if let Ok(exe) = std::env::current_exe() {
+        update::clean_old(&exe);
+    }
     let start_hidden = std::env::args().any(|a| a == "--tray");
     let gui_lock = launch::hold_gui_lock(&paths::data_dir());
     let restarting = Arc::new(AtomicBool::new(false));
@@ -325,7 +401,13 @@ pub fn run() {
                 show_main(app);
             }
         }))
-        .manage(AppState { mgr: Mutex::new(mgr), restarting })
+        .manage(AppState {
+            mgr: Mutex::new(mgr),
+            restarting,
+            feed: Mutex::new(None),
+            updating: AtomicBool::new(false),
+            updated_from: Mutex::new(updated_from),
+        })
         .setup(move |app| {
             let lang = app.state::<AppState>().mgr.lock().map(|m| m.locale()).unwrap_or("en-US");
             build_tray(app.handle(), lang)?;
@@ -361,6 +443,11 @@ pub fn run() {
             set_autostart,
             set_tray_with_claude,
             set_locale,
+            set_check_updates,
+            release_notes,
+            check_update,
+            install_update,
+            take_updated_from,
             create_shortcut,
             open_path
         ])

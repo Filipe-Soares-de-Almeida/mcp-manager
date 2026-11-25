@@ -1,0 +1,83 @@
+name: Release
+
+# A v* tag on main builds the exe, signs it with the update key and drafts a GitHub release with
+# the exe, its signature, latest.json (the feed the app reads) and SHA256SUMS.txt. Publish the
+# draft by hand: the app only sees a release once it is published.
+# Run by hand, it builds and signs and keeps the files as a workflow artifact, publishing nothing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  release:
+    name: Build, sign and draft the release
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read the version and check the tag
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+            if ($env:GITHUB_REF_NAME -ne "v$version") { throw "The tag $env:GITHUB_REF_NAME does not match version $version." }
+            git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+            if ($LASTEXITCODE -ne 0) { throw "The tag $env:GITHUB_REF_NAME does not point at a commit on main." }
+          }
+          $conf = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          if ($conf -ne $version) { throw "tauri.conf.json says $conf, package.json says $version." }
+          if (-not (Select-String -Path src-tauri/Cargo.toml -Pattern "^version = `"$version`"" -Quiet)) {
+            throw "Cargo.toml does not say $version."
+          }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install the dependencies
+        run: npm ci
+
+      - name: Test
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Build the exe
+        run: npm run app:build
+
+      - name: Sign the exe
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          npx tauri signer sign --app-version $env:VERSION src-tauri/target/release/mcp-manager.exe
+          if ($LASTEXITCODE -ne 0) { throw "Signing failed with exit code $LASTEXITCODE." }
+
+      - name: Write the feed, the notes and the checksums
+        shell: pwsh
+        run: ./tools/release-feed.ps1 -Version $env:VERSION -Out release
+
+      - name: Keep the files
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: release/
+
+      - name: Draft the release
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME release/mcp-manager.exe release/mcp-manager.exe.sig release/latest.json release/SHA256SUMS.txt `
+            --title "MCP Manager $env:VERSION" --notes-file release/release-notes.md --verify-tag --draft

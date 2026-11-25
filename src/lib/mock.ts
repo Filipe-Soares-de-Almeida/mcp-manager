@@ -1,6 +1,6 @@
 // In-browser stand-in for the Rust side, used only when the page runs
 // outside Tauri (`npm run dev` in a browser) so the UI can be previewed.
-import type { BackupInfo, OpKind, Outcome, Pending, Row, Snapshot, Spec } from "./types";
+import type { BackupInfo, OpKind, Outcome, Pending, Release, Row, Snapshot, Spec } from "./types";
 
 type Listener = (payload: unknown) => void;
 const listeners = new Map<string, Set<Listener>>();
@@ -29,14 +29,58 @@ const disabled: Record<string, Spec> = {
 };
 let pending: (Omit<Pending, "names"> & { name: string; spec?: Spec; newName?: string })[] = [];
 let running = true;
-const startup = { autostart: false, tray_with_claude: true, shortcut: false };
+const startup = { autostart: false, tray_with_claude: true, shortcut: false, check_updates: true };
 let nextId = 1;
+
+// Release notes and an update feed. `?noupdate` (and `?hero`) report the version as the latest;
+// `?updated=0.0.9` shows the notice of a start right after an update.
+let version = "0.1.0";
+const NOTES: Record<string, Release[]> = {
+  "en-US": [
+    {
+      version: "0.3.0", date: "2026-12-10", summary: "Servers can be grouped, and the queue shows what each change will write.",
+      groups: [
+        { kind: "Added", items: ["Add groups on the Servers screen.", "Add a preview of the config a queued change will write."] },
+        { kind: "Fixed", items: ["Fix the editor closing when the list refreshes."] },
+      ],
+    },
+    {
+      version: "0.2.0", date: "2026-12-01", summary: null,
+      groups: [{ kind: "Changed", items: ["Change the start to be faster when Claude has many servers."] }, { kind: "Fixed", items: ["Fix Restore dropping the disabled servers."] }],
+    },
+    {
+      version: "0.1.0", date: "2026-11-24", summary: "The first release: Claude Desktop's MCP servers in one window, and from Claude's chat.",
+      groups: [{ kind: "Added", items: ["Add a window to add, edit, rename, remove, disable and enable Claude Desktop's MCP servers.", "Add a queue that holds changes while Claude runs and writes them once it closes.", "Add in-app updates that download the new version, check its signature and install it."] }],
+    },
+  ],
+  "pt-BR": [
+    {
+      version: "0.3.0", date: "2026-12-10", summary: "Servidores podem ser agrupados, e a fila mostra o que cada alteração vai gravar.",
+      groups: [
+        { kind: "Added", items: ["Adiciona grupos na tela de Servidores.", "Adiciona a prévia da config que uma alteração na fila vai gravar."] },
+        { kind: "Fixed", items: ["Corrige o editor que fechava quando a lista atualizava."] },
+      ],
+    },
+    {
+      version: "0.2.0", date: "2026-12-01", summary: null,
+      groups: [{ kind: "Changed", items: ["Altera a abertura para ser mais rápida quando o Claude tem muitos servidores."] }, { kind: "Fixed", items: ["Corrige o Restaurar que perdia os servidores desativados."] }],
+    },
+    {
+      version: "0.1.0", date: "2026-11-24", summary: "A primeira versão: os servidores MCP do Claude Desktop numa janela, e pelo chat do Claude.",
+      groups: [{ kind: "Added", items: ["Adiciona uma janela para adicionar, editar, renomear, remover, desativar e ativar os servidores MCP do Claude Desktop.", "Adiciona uma fila que segura as alterações enquanto o Claude roda e as grava quando ele fecha.", "Adiciona a atualização pelo próprio app, que baixa a versão nova, confere a assinatura e a instala."] }],
+    },
+  ],
+};
+const newerThan = (lang: string, v: string) =>
+  NOTES[lang === "pt-BR" ? "pt-BR" : "en-US"].filter((r) => r.version.localeCompare(v, undefined, { numeric: true }) > 0);
 
 // `?hero` opens the state the README screenshot shows: set up, with the
 // app's own entry registered and two changes waiting for Claude to close.
 // `?lang=en-US` or `?lang=pt-BR` picks the language.
 const params = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 const hero = params.has("hero");
+let updatedFrom = params.get("updated");
+const latestOffered = params.has("noupdate") || hero ? null : "0.3.0";
 let localeSetting = (params.get("lang") ?? "auto") as "auto" | "pt-BR" | "en-US";
 const resolveLocale = () =>
   localeSetting !== "auto" ? localeSetting : navigator.language.toLowerCase().startsWith("pt") ? "pt-BR" : "en-US";
@@ -93,7 +137,7 @@ function snapshot(): Snapshot {
   rows.push(...removed);
   rows.sort((a, b) => a.name.localeCompare(b.name));
   return {
-    version: "0.1.0",
+    version,
     locale: { setting: localeSetting, resolved: resolveLocale() },
     startup: { ...startup },
     claude: {
@@ -179,6 +223,37 @@ export async function mockCall(cmd: string, args: Record<string, any> = {}): Pro
       emit("state-changed");
       return null;
     }
+    case "release_notes":
+      return NOTES[args.lang === "pt-BR" ? "pt-BR" : "en-US"].filter(
+        (r) => r.version.localeCompare(version, undefined, { numeric: true }) <= 0,
+      );
+    case "check_update": {
+      await wait(500);
+      const latest = latestOffered && latestOffered.localeCompare(version, undefined, { numeric: true }) > 0 ? latestOffered : version;
+      const pendingVersions = latest === version ? [] : newerThan(args.lang, version);
+      return { current: version, latest, available: pendingVersions.length > 0, pending: pendingVersions };
+    }
+    case "install_update": {
+      const total = 4_900_000;
+      for (let done = 0; done <= total; done += 700_000) {
+        emit("update-progress", { done: Math.min(done, total), total });
+        await wait(250);
+      }
+      emit("update-progress", { done: total, total });
+      await wait(900);
+      version = latestOffered ?? version;
+      emit("state-changed");
+      return null;
+    }
+    case "take_updated_from": {
+      const from = updatedFrom;
+      updatedFrom = null;
+      return from;
+    }
+    case "set_check_updates":
+      startup.check_updates = args.enabled;
+      emit("state-changed");
+      return null;
     case "set_locale":
       localeSetting = args.locale;
       emit("state-changed");

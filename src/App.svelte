@@ -9,6 +9,8 @@
   import Changes from "./lib/pages/Changes.svelte";
   import Servers from "./lib/pages/Servers.svelte";
   import Settings from "./lib/pages/Settings.svelte";
+  import Changelog from "./lib/pages/Changelog.svelte";
+  import { updates } from "./lib/updates.svelte";
   import { app, type Page } from "./lib/app.svelte";
   import { confirmer } from "./lib/confirm.svelte";
   import { i18n } from "./lib/i18n.svelte";
@@ -22,6 +24,7 @@
     { id: "servers", icon: "dns" },
     { id: "changes", icon: "schedule" },
     { id: "backups", icon: "history" },
+    { id: "changelog", icon: "description" },
     { id: "settings", icon: "settings" },
   ];
 
@@ -41,7 +44,7 @@
   }
 
   onMount(() => {
-    void app.init();
+    void app.init().then(() => updates.init());
   });
 </script>
 
@@ -83,6 +86,7 @@
           <span class="indicator state">
             <Icon name={d.icon} />
             {#if d.id === "changes" && pending}<span class="badge">{pending}</span>{/if}
+            {#if d.id === "changelog" && updates.available}<span class="badge dot" aria-hidden="true"></span>{/if}
           </span>
           <span class="label-m">{L.nav[d.id]}</span>
         </button>
@@ -119,6 +123,8 @@
           <Changes />
         {:else if app.page === "backups"}
           <Backups />
+        {:else if app.page === "changelog"}
+          <Changelog />
         {:else}
           <Settings />
         {/if}
@@ -283,6 +289,15 @@
     line-height: 16px;
     font-weight: 500;
     text-align: center;
+  }
+  .badge.dot {
+    top: 2px;
+    left: 36px;
+    min-width: 8px;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border-radius: 50%;
   }
   .main {
     flex: 1;

@@ -1,4 +1,4 @@
-import type { ApplyReport, BackupInfo, Outcome, Snapshot, Spec } from "./types";
+import type { ApplyReport, BackupInfo, Outcome, Release, Snapshot, Spec, UpdateCheck } from "./types";
 
 const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -56,6 +56,11 @@ export const api = {
   restart: () => call<void>("restart_claude"),
   setAutostart: (enabled: boolean) => call<void>("set_autostart", { enabled }),
   setLocale: (locale: string) => call<void>("set_locale", { locale }),
+  setCheckUpdates: (enabled: boolean) => call<void>("set_check_updates", { enabled }),
+  releaseNotes: (lang: string) => call<Release[]>("release_notes", { lang }),
+  checkUpdate: (lang: string) => call<UpdateCheck>("check_update", { lang }),
+  installUpdate: () => call<void>("install_update"),
+  takeUpdatedFrom: () => call<string | null>("take_updated_from"),
   setTrayWithClaude: (enabled: boolean) => call<void>("set_tray_with_claude", { enabled }),
   createShortcut: () => call<string>("create_shortcut"),
   backups: () => call<BackupInfo[]>("list_backups"),

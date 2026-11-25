@@ -9,6 +9,8 @@
 </p>
 
 <p align="center">
+  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Filipe-Soares-de-Almeida/mcp-manager"></a>
+  <a href="../../releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Filipe-Soares-de-Almeida/mcp-manager/total"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078d6.svg">
   <img alt="Built with Rust and Tauri" src="https://img.shields.io/badge/built%20with-Rust%20%2B%20Tauri-b7410e.svg">
@@ -28,7 +30,8 @@ MCP Manager is a free, open-source Windows app that adds, edits, disables and re
 Desktop's MCP servers, from a window or from Claude's own chat. Every change made while Claude is
 open waits in a queue and is written to `claude_desktop_config.json` when Claude closes; **Restart
 Claude** closes it, applies the queue and opens it again. It also keeps disabled servers so you can
-turn them back on, backs up the config before every write, and waits in the tray, one click away.
+turn them back on, backs up the config before every write, waits in the tray, one click away, and
+updates itself.
 
 It runs on Windows (x64), in English and Brazilian Portuguese, and works with both ways Claude
 Desktop is installed: the MSIX package and the older installer in `%LOCALAPPDATA%\AnthropicClaude`.
@@ -53,50 +56,65 @@ or time Claude's restart around it. It changes Claude Desktop's config only: the
 - **Finds the config from Claude's executable.** The path comes from the running `Claude.exe` or from
   the package registered in Windows: `%LOCALAPPDATA%\Claude-Data\<package>\` for MSIX,
   `%APPDATA%\Claude\` for the older installer.
-- **Local.** MCP Manager makes no network requests: it only reads and writes files on this PC.
+- **Updates itself, and nothing else goes online.** The start screen names the versions not installed
+  yet; one click in the Changelog downloads the new exe, checks its signature and restarts the app,
+  even while Claude runs its MCP. That check, a request to this repository's latest release that Settings can turn off,
+  is the only network request MCP Manager makes.
 
 ---
 
 ## Install
 
-There is no installer yet: the executable is built from source. You need:
+Download `mcp-manager.exe` from the [latest release](../../releases/latest), put it in a folder of its
+own, such as `%LOCALAPPDATA%\Programs\MCP Manager\`, and double-click it. There is no installer: the
+exe is the whole app, and later versions replace it in place from the Changelog screen. On the first
+run, the **First steps** card in Servers registers the app's MCP in Claude, turns on starting with
+Windows and creates the Start menu shortcut.
 
-- Windows x64 with the
-  [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/), which ships with
-  Windows 11 and with up-to-date Windows 10.
-- Rust 1.89 or newer, with the MSVC toolchain (`x86_64-pc-windows-msvc`) and Visual Studio Build
-  Tools.
-- Node.js 20.19+, 22.12+ or 24+.
+> [!IMPORTANT]
+> The exe is not code-signed: Windows may show "Windows protected your PC" the first time. Check the
+> download against `SHA256SUMS.txt` on the release page, then choose **More info** and **Run anyway**.
+
+> [!NOTE]
+> The exe's path is written into Claude's config when the app's MCP is registered, and into the
+> start-with-Windows entry, so pick the folder before the first run. If you move the file later,
+> Settings shows "Points to another executable" with an **Update the path** button; turn **Start with
+> Windows** off and on again to fix the other entry.
+
+<details>
+<summary><b>Verify your download</b> — check the exe against the published hash</summary>
+
+```powershell
+(Get-FileHash .\mcp-manager.exe -Algorithm SHA256).Hash
+```
+
+The result must match the `mcp-manager.exe` line of `SHA256SUMS.txt`, ignoring letter case. The
+in-app update does more: it checks the new exe's signature against the key built into the app, and
+refuses a file signed for any other version.
+
+</details>
+
+<details>
+<summary><b>Build from source</b> — prerequisites, development and test variables</summary>
+
+You need Windows x64 with the
+[WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (it ships with Windows 11
+and up-to-date Windows 10), Rust 1.89 or newer with the MSVC toolchain and Visual Studio Build Tools,
+and Node.js 20.19+, 22.12+ or 24+.
 
 ```powershell
 npm install
 npm run app:build
-```
-
-The executable lands in `src-tauri\target\release\mcp-manager.exe`. Copy it to a permanent folder,
-such as `%LOCALAPPDATA%\Programs\MCP Manager\`, and double-click it. On the first run, the **First
-steps** card in Servers registers the app's MCP in Claude, turns on starting with Windows and creates
-the Start menu shortcut.
-
-> [!IMPORTANT]
-> The executable's path is written into Claude's config when the app's MCP is registered, and into
-> the start-with-Windows entry. Pick the permanent folder first. If you move the file later, Settings
-> shows "Points to another executable" with an **Update the path** button; turn **Start with
-> Windows** off and on again to fix the other entry.
-
-<details>
-<summary><b>Development</b> — hot reload, tests, and testing without touching Claude</summary>
-
-```powershell
 npm run app:dev
 npm run dev
 npm run check
 cd src-tauri; cargo test
 ```
 
-`npm run app:dev` opens the app with hot reload. `npm run dev` serves only the interface in a
-browser, at `http://localhost:1420`, with sample data; `?hero` opens the state of the screenshot
-above, and `?lang=en-US` or `?lang=pt-BR` picks the language.
+`npm run app:build` writes `src-tauri\target\release\mcp-manager.exe`. `npm run app:dev` opens the app
+with hot reload. `npm run dev` serves only the interface in a browser, at `http://localhost:1420`,
+with sample data; `?hero` opens the state of the screenshot above, `?lang=en-US` or `?lang=pt-BR`
+picks the language, and `?noupdate` hides the sample update.
 
 | Variable | Effect |
 |---|---|
@@ -104,6 +122,26 @@ above, and `?lang=en-US` or `?lang=pt-BR` picks the language.
 | `MCP_MANAGER_CONFIG` | Config used instead of the detected one |
 | `MCP_MANAGER_FAKE_CLAUDE` | `1` pretends Claude is open, `0` closed |
 | `MCP_MANAGER_NO_WATCHER` | Starts neither the watcher nor the tray app |
+| `MCP_MANAGER_UPDATE_FEED` | Update feed URL instead of the latest release's `latest.json` |
+
+</details>
+
+<details>
+<summary><b>Releasing a version</b> — changelog, version bump, tag and the release workflow</summary>
+
+Every change adds its entries under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md) and in
+`locales/changelog/pt-BR.md`. To release:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\version.ps1 -Version 0.2.0 -Push
+```
+
+The script sets the version in `package.json`, `package-lock.json`, `tauri.conf.json`, `Cargo.toml`
+and `Cargo.lock`, turns Unreleased into `[0.2.0]` with today's date in both changelogs, commits, tags
+`v0.2.0` and pushes. The tag starts `.github/workflows/release.yml`, which tests, builds, signs the
+exe with the repository secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`,
+and drafts the release with the exe, its signature, `latest.json` and `SHA256SUMS.txt`. Installed
+apps see the version once the draft is published.
 
 </details>
 
@@ -117,10 +155,11 @@ draws its own title bar: it shows whether Claude is open and, while changes are 
 
 | Screen | What it does |
 |---|---|
-| **Servers** | The enabled and the disabled servers, with a switch to turn each one on or off, edit, remove, and undo the last queued change. The editor takes JSON pasted from a README and fills in the command, arguments and variables. |
+| **Servers** | The enabled and the disabled servers, with a switch to turn each one on or off, edit, remove, and undo the last queued change. The editor takes JSON pasted from a README and fills in the command, arguments and variables. When a newer version exists, a card on top names the new versions and their dates, with **View changelog**. |
 | **Changes** | The queue, where you cancel one change or discard them all, and the history of applied changes, with the ones that failed and why. |
 | **Backups** | The config copies, with their date and number of servers. **View** lists a copy's servers and **Restore** queues its list. |
-| **Settings** | Starting with Windows and with Claude, the Start menu shortcut, the language (automatic, English or Portuguese), registering the app's MCP, the Claude executable and package found, the config path (or another one you choose) and the data folder. |
+| **Changelog** | The notes of every version, newest first, with the ones not installed yet on top, **Check for updates** and the update itself. |
+| **Settings** | Starting with Windows and with Claude, the update check, the Start menu shortcut, the language (automatic, English or Portuguese), registering the app's MCP, the Claude executable and package found, the config path (or another one you choose) and the data folder. |
 
 ## The tray
 
@@ -161,7 +200,8 @@ with `--mcp`:
 
 While Claude is open, every change comes back as `queued`, with a note that Claude needs a restart. A
 watcher without a window (`mcp-manager.exe --watch`) waits for Claude to close, writes the queue and
-exits.
+exits. After an update, the MCP inside Claude keeps running the previous version until Claude
+restarts.
 
 ## Where the data lives
 
@@ -169,7 +209,8 @@ exits.
 |---|---|
 | `%USERPROFILE%\.mcp-manager\mcp-manager.db` | The queue, the disabled servers, the history and the settings. Disabled servers exist only here: deleting the file loses them. |
 | `%USERPROFILE%\.mcp-manager\backups\` | The copies of `claude_desktop_config.json`. |
-| `%USERPROFILE%\.mcp-manager\mcp-manager.log` | The log of the watcher and of every write to the config. |
+| `%USERPROFILE%\.mcp-manager\mcp-manager.log` | The log of the watcher, of every write to the config and of every update. |
+| `mcp-manager.old.exe`, beside the exe | The previous version after an update, kept while Claude's MCP still runs it; the next start deletes it. |
 | `%LOCALAPPDATA%\com.mcpmanager.desktop\` | The window's own files (WebView2). |
 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value `MCP Manager` | Starting with Windows, when turned on. |
 | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\MCP Manager.lnk` | The Start menu shortcut, when created. |

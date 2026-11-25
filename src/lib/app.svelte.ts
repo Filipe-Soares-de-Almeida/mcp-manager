@@ -2,7 +2,7 @@ import { api, on } from "./api";
 import { i18n, type LocaleSetting } from "./i18n.svelte";
 import type { ApplyReport, Outcome, Snapshot } from "./types";
 
-export type Page = "servers" | "changes" | "backups" | "settings";
+export type Page = "servers" | "changes" | "backups" | "changelog" | "settings";
 
 export interface Toast {
   id: number;
@@ -76,6 +76,15 @@ class App {
     try {
       await api.setAutostart(enabled);
       this.toast(enabled ? i18n.t.toast.autostartOn : i18n.t.toast.autostartOff);
+      void this.refresh();
+    } catch (e) {
+      this.fail(e);
+    }
+  }
+
+  async setCheckUpdates(enabled: boolean) {
+    try {
+      await api.setCheckUpdates(enabled);
       void this.refresh();
     } catch (e) {
       this.fail(e);

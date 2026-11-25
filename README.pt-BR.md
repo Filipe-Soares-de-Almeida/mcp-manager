@@ -9,6 +9,8 @@
 </p>
 
 <p align="center">
+  <a href="../../releases/latest"><img alt="Última versão" src="https://img.shields.io/github/v/release/Filipe-Soares-de-Almeida/mcp-manager?label=vers%C3%A3o"></a>
+  <a href="../../releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Filipe-Soares-de-Almeida/mcp-manager/total"></a>
   <a href="LICENSE"><img alt="Licença: MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg"></a>
   <img alt="Plataforma: Windows" src="https://img.shields.io/badge/plataforma-Windows-0078d6.svg">
   <img alt="Feito com Rust e Tauri" src="https://img.shields.io/badge/feito%20com-Rust%20%2B%20Tauri-b7410e.svg">
@@ -25,11 +27,11 @@
 ---
 
 MCP Manager é um app gratuito e de código aberto para Windows que adiciona, edita, desativa e remove
-os servidores MCP do Claude Desktop, por uma janela ou pelo próprio chat do Claude. Toda alteração feita com o Claude
-aberto espera numa fila e é gravada em `claude_desktop_config.json` quando ele fecha; o botão
-**Reiniciar Claude** fecha o app, aplica a fila e o abre de novo. Ele também guarda os servidores
-desativados para reativar depois, faz backup da config antes de cada gravação e fica na bandeja, a um
-clique.
+os servidores MCP do Claude Desktop, por uma janela ou pelo próprio chat do Claude. Toda alteração
+feita com o Claude aberto espera numa fila e é gravada em `claude_desktop_config.json` quando ele
+fecha; o botão **Reiniciar Claude** fecha o app, aplica a fila e o abre de novo. Ele também guarda os
+servidores desativados para reativar depois, faz backup da config antes de cada gravação, fica na
+bandeja, a um clique, e se atualiza sozinho.
 
 Roda no Windows (x64), com a interface em português do Brasil e em inglês, e funciona com as duas
 formas de instalação do Claude Desktop: o pacote MSIX e o instalador antigo em
@@ -55,50 +57,66 @@ que essa config não aceita.
 - **Acha a config pelo executável do Claude.** O caminho sai do `Claude.exe` em execução ou do pacote
   registrado no Windows: `%LOCALAPPDATA%\Claude-Data\<pacote>\` no MSIX, `%APPDATA%\Claude\` na
   instalação antiga.
-- **Local.** O MCP Manager não faz nenhuma requisição de rede: só lê e grava arquivos neste PC.
+- **Se atualiza sozinho, e nada mais vai à internet.** A tela inicial mostra as versões ainda não
+  instaladas; um clique no Changelog baixa o exe novo, confere a assinatura e reinicia o app, mesmo
+  com o Claude rodando o MCP dele. Essa consulta à última versão publicada neste repositório, que dá para desligar
+  em Ajustes, é a única requisição de rede do MCP Manager.
 
 ---
 
 ## Instalação
 
-Ainda não há instalador: o executável é compilado a partir do código. É preciso:
+Baixe o `mcp-manager.exe` da [última versão](../../releases/latest), ponha numa pasta só dele, como
+`%LOCALAPPDATA%\Programs\MCP Manager\`, e abra com dois cliques. Não há instalador: o exe é o app
+inteiro, e as próximas versões o substituem no lugar pela tela de Changelog. Na primeira vez, o
+cartão **Primeiros passos**, em Servidores, registra o MCP do app no Claude, liga o início com o
+Windows e cria o atalho no Menu Iniciar.
 
-- Windows x64 com o
-  [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/), que já vem no
-  Windows 11 e nas versões atualizadas do Windows 10.
-- Rust 1.89 ou mais novo, com o toolchain MSVC (`x86_64-pc-windows-msvc`) e o Visual Studio Build
-  Tools.
-- Node.js 20.19+, 22.12+ ou 24+.
+> [!IMPORTANT]
+> O exe não tem assinatura de código: o Windows pode mostrar "O Windows protegeu o computador" na
+> primeira vez. Confira o download com o `SHA256SUMS.txt` da página da versão e escolha **Mais
+> informações** e **Executar assim mesmo**.
+
+> [!NOTE]
+> O caminho do exe fica gravado na config do Claude quando o MCP do app é registrado, e na entrada de
+> início com o Windows, então escolha a pasta antes de abrir pela primeira vez. Se mover o arquivo
+> depois, Ajustes mostra "Aponta para outro executável" com o botão **Atualizar o caminho**; desligue
+> e ligue **Iniciar com o Windows** para corrigir a outra entrada.
+
+<details>
+<summary><b>Conferir o download</b> — compare o exe com o hash publicado</summary>
+
+```powershell
+(Get-FileHash .\mcp-manager.exe -Algorithm SHA256).Hash
+```
+
+O resultado tem de bater com a linha do `mcp-manager.exe` no `SHA256SUMS.txt`, sem diferenciar
+maiúsculas. A atualização pelo app vai além: confere a assinatura do exe novo com a chave embutida no
+app e recusa um arquivo assinado para qualquer outra versão.
+
+</details>
+
+<details>
+<summary><b>Compilar a partir do código</b> — pré-requisitos, desenvolvimento e variáveis de teste</summary>
+
+É preciso Windows x64 com o
+[WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (já vem no Windows 11 e
+no Windows 10 atualizado), Rust 1.89 ou mais novo com o toolchain MSVC e o Visual Studio Build Tools,
+e Node.js 20.19+, 22.12+ ou 24+.
 
 ```powershell
 npm install
 npm run app:build
-```
-
-O executável sai em `src-tauri\target\release\mcp-manager.exe`. Copie-o para uma pasta fixa, como
-`%LOCALAPPDATA%\Programs\MCP Manager\`, e abra com dois cliques. Na primeira vez, o cartão
-**Primeiros passos**, em Servidores, registra o MCP do app no Claude, liga o início com o Windows e
-cria o atalho no Menu Iniciar.
-
-> [!IMPORTANT]
-> O caminho do executável fica gravado na config do Claude quando o MCP do app é registrado, e na
-> entrada de início com o Windows. Escolha a pasta definitiva antes. Se mover o arquivo depois,
-> Ajustes mostra "Aponta para outro executável" com o botão **Atualizar o caminho**; desligue e ligue
-> **Iniciar com o Windows** para corrigir a outra entrada.
-
-<details>
-<summary><b>Desenvolvimento</b> — hot reload, testes e como testar sem tocar no Claude</summary>
-
-```powershell
 npm run app:dev
 npm run dev
 npm run check
 cd src-tauri; cargo test
 ```
 
-`npm run app:dev` abre o app com hot reload. `npm run dev` serve só a interface no navegador, em
-`http://localhost:1420`, com dados de exemplo; `?hero` abre o estado do print acima e `?lang=en-US`
-ou `?lang=pt-BR` escolhe o idioma.
+`npm run app:build` gera `src-tauri\target\release\mcp-manager.exe`. `npm run app:dev` abre o app com
+hot reload. `npm run dev` serve só a interface no navegador, em `http://localhost:1420`, com dados de
+exemplo; `?hero` abre o estado do print acima, `?lang=en-US` ou `?lang=pt-BR` escolhe o idioma, e
+`?noupdate` esconde a atualização de exemplo.
 
 | Variável | Efeito |
 |---|---|
@@ -106,6 +124,26 @@ ou `?lang=pt-BR` escolhe o idioma.
 | `MCP_MANAGER_CONFIG` | Config usada no lugar da detectada |
 | `MCP_MANAGER_FAKE_CLAUDE` | `1` finge o Claude aberto, `0` fechado |
 | `MCP_MANAGER_NO_WATCHER` | Não inicia o vigia nem o app na bandeja |
+| `MCP_MANAGER_UPDATE_FEED` | URL do feed de atualização no lugar do `latest.json` da última versão |
+
+</details>
+
+<details>
+<summary><b>Publicar uma versão</b> — changelog, número da versão, tag e o workflow de release</summary>
+
+Toda mudança acrescenta suas entradas em `## [Unreleased]` no [CHANGELOG.md](CHANGELOG.md) e em
+`locales/changelog/pt-BR.md`. Para publicar:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\version.ps1 -Version 0.2.0 -Push
+```
+
+O script põe a versão no `package.json`, `package-lock.json`, `tauri.conf.json`, `Cargo.toml` e
+`Cargo.lock`, transforma Unreleased em `[0.2.0]` com a data do dia nos dois changelogs, commita, cria
+a tag `v0.2.0` e envia. A tag dispara o `.github/workflows/release.yml`, que testa, compila, assina o
+exe com os secrets `TAURI_SIGNING_PRIVATE_KEY` e `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` do repositório
+e cria o rascunho da versão com o exe, a assinatura, o `latest.json` e o `SHA256SUMS.txt`. Os apps
+instalados enxergam a versão quando o rascunho é publicado.
 
 </details>
 
@@ -119,10 +157,11 @@ na fila, o botão **Reiniciar Claude**, com uma faixa logo abaixo explicando a f
 
 | Tela | O que faz |
 |---|---|
-| **Servidores** | Os servidores ativos e os desativados, com a chave que liga e desliga cada um, editar, remover e desfazer a última alteração na fila. O editor aceita o JSON colado de um README e preenche comando, argumentos e variáveis. |
+| **Servidores** | Os servidores ativos e os desativados, com a chave que liga e desliga cada um, editar, remover e desfazer a última alteração na fila. O editor aceita o JSON colado de um README e preenche comando, argumentos e variáveis. Quando há versão nova, um cartão no topo mostra as versões novas e suas datas, com **Ver changelog**. |
 | **Alterações** | A fila, com cancelar uma alteração ou descartar todas, e o histórico do que já foi aplicado, com as que falharam e o motivo. |
 | **Backups** | As cópias da config, com data e número de servidores. **Ver** lista os servidores de uma cópia e **Restaurar** põe a lista dela na fila. |
-| **Ajustes** | O início com o Windows e com o Claude, o atalho no Menu Iniciar, o idioma (automático, português ou inglês), o registro do MCP do app, o executável e o pacote do Claude encontrados, o caminho da config (ou outro, escolhido por você) e a pasta de dados. |
+| **Changelog** | As notas de todas as versões, da mais nova para a mais antiga, com as ainda não instaladas no topo, **Procurar atualizações** e a própria atualização. |
+| **Ajustes** | O início com o Windows e com o Claude, a busca de atualizações, o atalho no Menu Iniciar, o idioma (automático, português ou inglês), o registro do MCP do app, o executável e o pacote do Claude encontrados, o caminho da config (ou outro, escolhido por você) e a pasta de dados. |
 
 ## A bandeja
 
@@ -163,7 +202,8 @@ com `--mcp`:
 
 Com o Claude aberto, toda alteração volta como `queued`, com o aviso de que o Claude precisa ser
 reiniciado. Um vigia sem janela (`mcp-manager.exe --watch`) espera o Claude fechar, grava a fila e
-termina.
+termina. Depois de uma atualização, o MCP dentro do Claude segue na versão anterior até o Claude
+reiniciar.
 
 ## Onde ficam os dados
 
@@ -171,7 +211,8 @@ termina.
 |---|---|
 | `%USERPROFILE%\.mcp-manager\mcp-manager.db` | A fila, os servidores desativados, o histórico e os ajustes. Os desativados só existem aqui: apagar o arquivo os perde. |
 | `%USERPROFILE%\.mcp-manager\backups\` | As cópias de `claude_desktop_config.json`. |
-| `%USERPROFILE%\.mcp-manager\mcp-manager.log` | O registro do vigia e de cada gravação na config. |
+| `%USERPROFILE%\.mcp-manager\mcp-manager.log` | O registro do vigia, de cada gravação na config e de cada atualização. |
+| `mcp-manager.old.exe`, ao lado do exe | A versão anterior depois de uma atualização, mantida enquanto o MCP do Claude ainda a usa; a próxima abertura a apaga. |
 | `%LOCALAPPDATA%\com.mcpmanager.desktop\` | Os arquivos da janela (WebView2). |
 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, valor `MCP Manager` | O início com o Windows, quando ligado. |
 | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\MCP Manager.lnk` | O atalho do Menu Iniciar, quando criado. |

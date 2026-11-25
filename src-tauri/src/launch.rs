@@ -77,6 +77,33 @@ pub fn spawn_self(data: &Path, args: &[&str], wmi_first: bool) {
     }
 }
 
+/// Blocks until process `pid` exits, or `timeout` passes.
+pub fn wait_for_exit(pid: u32, timeout: std::time::Duration) {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_SYNCHRONIZE, WaitForSingleObject};
+    // SAFETY: the handle is checked for null and closed once waited on.
+    unsafe {
+        let handle = OpenProcess(PROCESS_SYNCHRONIZE, 0, pid);
+        if handle.is_null() {
+            return;
+        }
+        WaitForSingleObject(handle, timeout.as_millis().min(u32::MAX as u128) as u32);
+        CloseHandle(handle);
+    }
+}
+
+/// Starts this app again from `exe` once the current process exits.
+pub fn relaunch_after_update(exe: &Path, from_version: &str) -> Result<()> {
+    Command::new(exe)
+        .args(["--wait-pid", &std::process::id().to_string(), "--updated-from", from_version])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .with_context(|| format!("starting {}", exe.display()))?;
+    Ok(())
+}
+
 // ---- GUI lock -----------------------------------------------------------
 
 fn gui_lock_path(data: &Path) -> PathBuf {
