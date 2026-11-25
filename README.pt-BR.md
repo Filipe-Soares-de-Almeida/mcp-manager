@@ -47,8 +47,8 @@ que essa config não aceita.
   com o comando, os argumentos, as variáveis de ambiente e qualquer outro campo. Ativar devolve a mesma
   entrada.
 - **Também pelo chat.** O app é um servidor MCP: registrado com um clique, deixa o Claude listar,
-  adicionar, editar, desativar e remover servidores. Os valores das variáveis aparecem como `***`, a não
-  ser que se peça.
+  adicionar, editar, desativar e remover servidores. Por ele, os valores das variáveis chegam ao chat
+  como `***`, a não ser que o agente peça por eles.
 - **Backup antes de cada gravação.** Uma cópia de `claude_desktop_config.json` é feita antes de gravar
   e ao abrir o app, quando a config mudou; ficam as 100 mais recentes, e qualquer uma pode ser
   restaurada. Só `mcpServers` é alterado: `preferences` e as outras chaves voltam como estavam.

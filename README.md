@@ -45,7 +45,8 @@ or time Claude's restart around it. It changes Claude Desktop's config only: the
   database with its command, arguments, environment variables and any other field. Enabling it puts
   the same entry back.
 - **Also from the chat.** The app is an MCP server too: registered with one click, it lets Claude
-  list, add, edit, disable and remove servers. Environment values show as `***` unless asked for.
+  list, add, edit, disable and remove servers. Through it, environment values reach the chat as `***`
+  unless the agent asks for them.
 - **A backup before every write.** `claude_desktop_config.json` is copied before each write and when
   the app opens, if the config changed; the 100 newest copies are kept, and any of them can be
   restored. Only `mcpServers` is touched: `preferences` and every other key are written back as read.
